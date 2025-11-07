@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  # Frontend service - using pre-built image from ECR
+  frontend:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/tracking-hub-frontend:latest
+    container_name: tracking-hub-frontend
+    ports:
+      - "80:80"     # HTTP
+      # - "443:443" # HTTPS (if you add SSL later)
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
