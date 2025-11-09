@@ -19,8 +19,8 @@ const OAUTH_CONFIG = {
   tokenUrl: envRecord.VITE_OAUTH_TOKEN_URL ?? '',
   clientId: envRecord.VITE_OAUTH_CLIENT_ID ?? '',
   clientSecret: envRecord.VITE_OAUTH_CLIENT_SECRET ?? '',
-  scopes: envRecord.VITE_OAUTH_SCOPES ?? 'openid email phone',
-  redirectUri: envRecord.VITE_OAUTH_REDIRECT_URI ?? 'http://localhost:5173/dashboard',
+  scopes: envRecord.VITE_OAUTH_SCOPES ?? '',
+  redirectUri: envRecord.VITE_OAUTH_REDIRECT_URI ?? '',
 };
 
 // PKCE helpers
@@ -127,18 +127,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Ignore storage errors (private mode, etc.)
     }
 
-    // Build Hosted UI logout URL and redirect
-    const configuredRedirect = envRecord.VITE_OAUTH_LOGOUT_REDIRECT || '/track';
-    const absoluteLogoutRedirect = /^https?:\/\//i.test(configuredRedirect)
-      ? configuredRedirect
-      : `${window.location.origin}${configuredRedirect.startsWith('/') ? '' : '/'}${configuredRedirect}`;
+    // Use VITE_OAUTH_LOGOUT_URL and VITE_OAUTH_LOGOUT_REDIRECT directly from env
+    if (!envRecord.VITE_OAUTH_LOGOUT_URL || !envRecord.VITE_OAUTH_LOGOUT_REDIRECT) {
+      console.error('Missing required environment variables for logout: VITE_OAUTH_LOGOUT_URL or VITE_OAUTH_LOGOUT_REDIRECT');
+      return;
+    }
 
-    // Allow overriding logout domain via env, else derive from authUrl
-    const logoutBase = envRecord.VITE_OAUTH_LOGOUT_URL
-      ? envRecord.VITE_OAUTH_LOGOUT_URL
-      : OAUTH_CONFIG.authUrl.replace('/oauth2/authorize', '/logout');
-
-    const logoutUrl = `${logoutBase}?client_id=${encodeURIComponent(OAUTH_CONFIG.clientId)}&logout_uri=${encodeURIComponent(absoluteLogoutRedirect)}`;
+    const logoutUrl = `${envRecord.VITE_OAUTH_LOGOUT_URL}?client_id=${encodeURIComponent(OAUTH_CONFIG.clientId)}&logout_uri=${encodeURIComponent(envRecord.VITE_OAUTH_LOGOUT_REDIRECT)}`;
 
     window.location.replace(logoutUrl);
   };
@@ -263,12 +258,12 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
           setIsProcessingCallback(false);
         }
       } else if (!isLoading && !isAuthenticated && !hasRedirected) {
-        // After logout, avoid immediate login; redirect to /track
+        // After logout, avoid immediate login; use configured logout redirect
         const justLoggedOut = sessionStorage.getItem('justLoggedOut');
         if (justLoggedOut) {
           try { sessionStorage.removeItem('justLoggedOut'); } catch (e) { /* ignore */ }
           setHasRedirected(true);
-          window.location.replace('/track');
+          // Let Cognito handle the redirect using VITE_OAUTH_LOGOUT_REDIRECT
           return;
         }
         // Not authenticated - redirect to login

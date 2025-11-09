@@ -1,14 +1,14 @@
-version: '3.8'
-
 services:
-  # Frontend service - using pre-built image from ECR
   frontend:
-    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/tracking-hub-frontend:latest
+    image: hanuman97/tracking-hub-frontend:latest
     container_name: tracking-hub-frontend
     ports:
-      - "80:80"     # HTTP
-      # - "443:443" # HTTPS (if you add SSL later)
+      - "80:80"
+      - "443:443"
     restart: unless-stopped
+    volumes:
+      - /home/ec2-user/fullchain.pem:/etc/ssl/certs/fullchain.pem:ro
+      - /home/ec2-user/privkey.pem:/etc/ssl/private/privkey.pem:ro
     networks:
       - app-network
 
